@@ -79,7 +79,9 @@ pub fn encode_key(input: &KeyInput<'_>, mode: InputMode, alt_is_meta: bool) -> O
         "tab" if m.shift => b"\x1b[Z".to_vec(),
         "tab" => with_meta(b"\t"),
         "backspace" if m.ctrl => vec![0x08],
-        "backspace" => with_meta(&[0x7f]),
+        // Backspace no compone caracteres: Alt siempre manda ESC DEL (borrar palabra).
+        "backspace" if m.alt => b"\x1b\x7f".to_vec(),
+        "backspace" => vec![0x7f],
         "escape" => vec![0x1b],
         "up" => cursor_key('A'),
         "down" => cursor_key('B'),
@@ -248,6 +250,16 @@ mod tests {
         assert_eq!(enc(key("escape")), Some(b"\x1b".to_vec()));
         assert_eq!(enc(key("delete")), Some(b"\x1b[3~".to_vec()));
         assert_eq!(enc(key("pageup")), Some(b"\x1b[5~".to_vec()));
+    }
+
+    #[test]
+    fn option_backspace_borra_palabra_en_macos() {
+        // Backspace no compone caracteres: Option+Backspace manda ESC DEL aunque alt_is_meta sea false.
+        assert_eq!(
+            encode_key(&with("backspace", ALT), NORMAL, false),
+            Some(b"\x1b\x7f".to_vec())
+        );
+        assert_eq!(enc(with("backspace", CTRL)), Some(vec![0x08]));
     }
 
     #[test]
