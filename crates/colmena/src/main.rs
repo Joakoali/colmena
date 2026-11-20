@@ -1,34 +1,42 @@
 use gpui::{
-    App, Application, Bounds, Context, Window, WindowBounds, WindowOptions, div, prelude::*, px,
-    rgb, size,
+    App, Application, Bounds, Focusable, KeyBinding, WindowBounds, WindowOptions, actions,
+    prelude::*, px, size,
 };
+use term_view::{TerminalOptions, TerminalView};
+use tracing_subscriber::EnvFilter;
 
-struct Empty;
-
-impl Render for Empty {
-    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
-        div()
-            .size_full()
-            .flex()
-            .items_center()
-            .justify_center()
-            .bg(rgb(0x16181c))
-            .text_color(rgb(0xdcdfe4))
-            .child("colmena")
-    }
-}
+actions!(colmena, [Quit]);
 
 fn main() {
-    Application::new().run(|cx: &mut App| {
-        let bounds = Bounds::centered(None, size(px(960.), px(620.)), cx);
-        cx.open_window(
-            WindowOptions {
-                window_bounds: Some(WindowBounds::Windowed(bounds)),
-                ..Default::default()
-            },
-            |_, cx| cx.new(|_| Empty),
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            EnvFilter::try_from_env("COLMENA_LOG").unwrap_or_else(|_| EnvFilter::new("info")),
         )
-        .expect("no se pudo abrir la ventana");
-        cx.activate(true);
+        .init();
+
+    Application::new().run(|cx: &mut App| {
+        term_view::bind_keys(cx);
+        cx.on_action(|_: &Quit, cx| cx.quit());
+        if cfg!(target_os = "macos") {
+            cx.bind_keys([KeyBinding::new("cmd-q", Quit, None)]);
+        }
+        cx.on_window_closed(|cx| cx.quit()).detach();
+
+        let bounds = Bounds::centered(None, size(px(960.), px(620.)), cx);
+        let window = cx
+            .open_window(
+                WindowOptions {
+                    window_bounds: Some(WindowBounds::Windowed(bounds)),
+                    ..Default::default()
+                },
+                |window, cx| cx.new(|cx| TerminalView::new(TerminalOptions::default(), window, cx)),
+            )
+            .expect("no se pudo abrir la ventana");
+        window
+            .update(cx, |view, window, cx| {
+                window.focus(&view.focus_handle(cx));
+                cx.activate(true);
+            })
+            .expect("no se pudo enfocar la terminal");
     });
 }
