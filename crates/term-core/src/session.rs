@@ -74,6 +74,12 @@ impl Session {
             .or_insert_with(|| "xterm-256color".into());
         env.entry("COLORTERM".into())
             .or_insert_with(|| "truecolor".into());
+        // Las apps adentro (Claude Code incluido) reconocen la terminal por `TERM_PROGRAM`; el
+        // valor heredado de la terminal que lanzó Colmena lo borra el binario al arrancar.
+        env.entry("TERM_PROGRAM".into())
+            .or_insert_with(|| "colmena".into());
+        env.entry("TERM_PROGRAM_VERSION".into())
+            .or_insert_with(|| env!("CARGO_PKG_VERSION").into());
         // En Windows `Options` tiene campos extra, por eso `..Default::default()`.
         #[allow(clippy::needless_update)]
         let pty_options = tty::Options {

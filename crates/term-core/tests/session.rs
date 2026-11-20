@@ -65,11 +65,23 @@ fn muestra_la_salida_usa_el_entorno_y_avisa_al_terminar() {
 #[test]
 fn exporta_term_xterm_256color() {
     let opts = SpawnOptions {
-        program: program("echo term=$TERM", ""),
+        program: program("echo term=$TERM color=$COLORTERM", ""),
         ..SpawnOptions::default()
     };
     let session = Session::spawn(opts, |_| {}).expect("spawn");
-    wait_for_text(&session, "term=xterm-256color");
+    wait_for_text(&session, "term=xterm-256color color=truecolor");
+}
+
+#[cfg(unix)]
+#[test]
+fn se_identifica_como_colmena_en_term_program() {
+    let opts = SpawnOptions {
+        program: program("echo prog=$TERM_PROGRAM ver=$TERM_PROGRAM_VERSION.", ""),
+        ..SpawnOptions::default()
+    };
+    let session = Session::spawn(opts, |_| {}).expect("spawn");
+    let expected = format!("prog=colmena ver={}.", env!("CARGO_PKG_VERSION"));
+    wait_for_text(&session, &expected);
 }
 
 #[cfg(unix)]

@@ -1,6 +1,7 @@
 //! Núcleo de terminal de Colmena: PTY, emulación VT y codificación de entrada, sin UI.
 
 pub mod color;
+pub mod env;
 pub mod input;
 mod listener;
 pub mod modes;
@@ -11,6 +12,7 @@ pub mod size;
 pub mod snapshot;
 
 pub use color::{Palette, Rgb};
+pub use env::{inherited_terminal_vars, is_inherited_terminal_var};
 pub use input::{InputMode, KeyInput, Mods, encode_key, encode_paste};
 pub use modes::Modes;
 pub use mouse::{MouseAction, MouseMode, ReportButton, alternate_scroll, encode_mouse};

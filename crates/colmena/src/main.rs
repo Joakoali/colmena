@@ -8,6 +8,16 @@ use tracing_subscriber::EnvFilter;
 actions!(colmena, [Quit]);
 
 fn main() {
+    // Lo primero: que el shell no herede la identidad de la terminal o de la sesión de Claude Code
+    // desde la que se lanzó Colmena (`TERM_PROGRAM`, `CLAUDECODE`, …). alacritty solo puede
+    // agregar variables al hijo, así que se borran del entorno del proceso.
+    for name in term_core::inherited_terminal_vars() {
+        // SAFETY: todavía no existe ningún otro hilo (ni el logger, ni GPUI, ni el PTY); los
+        // constructores previos a `main` de GPUI solo registran clases de Objective-C. Nadie lee
+        // el entorno mientras se modifica.
+        unsafe { std::env::remove_var(name) };
+    }
+
     tracing_subscriber::fmt()
         .with_env_filter(
             EnvFilter::try_from_env("COLMENA_LOG").unwrap_or_else(|_| EnvFilter::new("info")),
