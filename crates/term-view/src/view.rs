@@ -149,6 +149,7 @@ impl TerminalView {
                 self.session = Some(Arc::new(session));
                 self.exited = None;
                 self.spawn_error = None;
+                self.title = None;
             }
             Err(err) => {
                 tracing::error!("no se pudo abrir el shell: {err}");
@@ -177,6 +178,7 @@ impl TerminalView {
     }
 
     fn handle_event(&mut self, event: TermEvent, cx: &mut Context<Self>) {
+        tracing::debug!("evento: {event:?}");
         match event {
             TermEvent::Wakeup | TermEvent::Bell => {}
             TermEvent::Title(title) => self.title = Some(title),
