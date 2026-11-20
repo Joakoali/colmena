@@ -64,8 +64,6 @@ impl Default for TerminalOptions {
 }
 
 /// Geometría del último frame pintado, para traducir posiciones del mouse a celdas.
-// Campos y métodos usados por la selección con mouse (Task 10).
-#[allow(dead_code)]
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct PaintedLayout {
     pub origin: Point<Pixels>,
@@ -76,7 +74,6 @@ pub(crate) struct PaintedLayout {
     pub cursor: Option<(usize, usize)>,
 }
 
-#[allow(dead_code)]
 impl PaintedLayout {
     pub(crate) fn cell_at(&self, position: Point<Pixels>) -> (usize, usize, bool) {
         let x = f32::from(position.x - self.origin.x);
@@ -85,8 +82,6 @@ impl PaintedLayout {
     }
 }
 
-// `selecting` y `scroll_accum` los usa el Task 10.
-#[allow(dead_code)]
 pub struct TerminalView {
     pub(crate) options: TerminalOptions,
     pub(crate) session: Option<Arc<Session>>,
@@ -322,6 +317,10 @@ impl Render for TerminalView {
             .on_action(cx.listener(Self::copy))
             .on_action(cx.listener(Self::paste))
             .on_key_down(cx.listener(Self::on_key_down))
+            .on_mouse_down(gpui::MouseButton::Left, cx.listener(Self::on_mouse_down))
+            .on_mouse_move(cx.listener(Self::on_mouse_move))
+            .on_mouse_up(gpui::MouseButton::Left, cx.listener(Self::on_mouse_up))
+            .on_scroll_wheel(cx.listener(Self::on_scroll))
             .relative()
             .size_full()
             .bg(to_hsla(palette.background))

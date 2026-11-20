@@ -2,6 +2,7 @@
 
 pub mod convert;
 pub mod layout;
+mod mouse;
 mod paint;
 mod view;
 
