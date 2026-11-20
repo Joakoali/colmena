@@ -43,7 +43,7 @@ Colmena **no es un agente** ni llama a ningún modelo. El agente es Claude Code,
 |---|---|---|
 | UI | **GPUI** + **gpui-component** | Render por GPU. Zed usa la misma combinación (GPUI + `alacritty_terminal`) en los 3 OS. `gpui-component` trae árbol, paneles redimensionables, listas y theming. |
 | Emulación VT | **`alacritty_terminal`** | Motor probado, usado por Alacritty y Zed. |
-| PTY | **`portable-pty`** | Multiplataforma, incluye ConPTY en Windows. |
+| PTY | **El de `alacritty_terminal`** (`tty` + `EventLoop`) | Multiplataforma, incluye ConPTY en Windows; acepta variables de entorno por terminal. Mismo camino que Alacritty y Zed. |
 | Integración con Claude Code | **Hooks + transcripts** | Los hooks dan eventos en tiempo real y vinculan cada sesión con su terminal. Los transcripts dan el detalle: prompts, modelo, tokens y árbol. |
 | IPC hook → app | Socket local con **`interprocess`** | Unix domain socket en macOS/Linux y named pipe en Windows, con la misma API. |
 | Vigilancia de archivos | **`notify`**, con polling de respaldo | Lectura incremental de transcripts. |
@@ -75,7 +75,7 @@ Es un workspace de Cargo en `crates/`, con Rust edition 2024 y GPUI fijado a una
 
 | Crate | Responsabilidad | Depende de |
 |---|---|---|
-| `term-core` | Abre el PTY, lanza el shell del usuario con `COLMENA_PANE_ID` y `COLMENA_SOCKET` en el entorno, alimenta `alacritty_terminal` y expone la grilla, el resize, la escritura y la salida del proceso. | `portable-pty`, `alacritty_terminal`. Sin UI. |
+| `term-core` | Abre el PTY, lanza el shell del usuario con `COLMENA_PANE_ID` y `COLMENA_SOCKET` en el entorno, alimenta `alacritty_terminal` y expone la grilla, el resize, la escritura y la salida del proceso. | `alacritty_terminal`. Sin UI. |
 | `term-view` | Elemento GPUI que dibuja la grilla (glifos, colores, cursor, selección) y traduce teclado y mouse a bytes. | `term-core`, GPUI |
 | `agent-model` | Estado puro `Pane → Sesión → árbol de Agentes`. La función `apply(&mut State, Event)` no hace IO. | Ninguna |
 | `ingest` | Servidor de socket que recibe hooks y lector incremental de transcripts. Los dos producen `Event`s. | `agent-model`, `interprocess`, `notify`, `serde_json` |

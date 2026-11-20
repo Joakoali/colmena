@@ -1,0 +1,11 @@
+[package]
+name = "term-view"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+term-core.workspace = true
+gpui.workspace = true
+futures.workspace = true
+tracing.workspace = true
