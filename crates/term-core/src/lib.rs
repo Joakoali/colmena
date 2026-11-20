@@ -2,11 +2,15 @@
 
 pub mod color;
 pub mod input;
+pub mod modes;
+pub mod mouse;
 pub mod size;
 pub mod snapshot;
 
 pub use color::{Palette, Rgb};
 pub use input::{InputMode, KeyInput, Mods, encode_key, encode_paste};
+pub use modes::Modes;
+pub use mouse::{MouseAction, MouseMode, ReportButton, alternate_scroll, encode_mouse};
 pub use size::GridSize;
 pub use snapshot::{CellStyle, CellView, CursorShape, CursorView, Snapshot, snapshot};
 
