@@ -15,6 +15,7 @@ use alacritty_terminal::tty;
 use crate::color::Palette;
 use crate::listener::Listener;
 use crate::modes::Modes;
+use crate::selection::{self, SelectKind};
 use crate::size::GridSize;
 use crate::snapshot::{Snapshot, snapshot};
 
@@ -145,6 +146,22 @@ impl Session {
 
     pub fn scroll_to_bottom(&self) {
         self.term.lock().scroll_display(Scroll::Bottom);
+    }
+
+    pub fn start_selection(&self, col: usize, row: usize, right_half: bool, kind: SelectKind) {
+        selection::start_selection(&mut self.term.lock(), col, row, right_half, kind);
+    }
+
+    pub fn update_selection(&self, col: usize, row: usize, right_half: bool) {
+        selection::update_selection(&mut self.term.lock(), col, row, right_half);
+    }
+
+    pub fn clear_selection(&self) {
+        self.term.lock().selection = None;
+    }
+
+    pub fn selection_text(&self) -> Option<String> {
+        selection::selection_text(&self.term.lock())
     }
 }
 
