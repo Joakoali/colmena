@@ -10,9 +10,9 @@ use std::sync::{Arc, Mutex};
 use futures::StreamExt;
 use futures::channel::mpsc;
 use gpui::{
-    App, Bounds, ClipboardItem, Context, ElementInputHandler, EntityInputHandler, FocusHandle,
-    Focusable, Font, InputHandler, KeyDownEvent, Pixels, Point, Task, UTF16Selection, Window,
-    canvas, div, font, point, prelude::*, px, size,
+    App, Bounds, ClipboardItem, Context, DispatchPhase, ElementInputHandler, EntityInputHandler,
+    FocusHandle, Focusable, Font, InputHandler, KeyDownEvent, MouseButton, MouseMoveEvent, Pixels,
+    Point, Task, UTF16Selection, Window, canvas, div, font, point, prelude::*, px, size,
 };
 use term_core::{GridSize, Palette, Session, SpawnOptions, TermEvent, encode_key, encode_paste};
 
@@ -94,7 +94,11 @@ pub struct TerminalView {
     pub(crate) exited: Option<Option<i32>>,
     pub(crate) spawn_error: Option<String>,
     marked_text: Option<String>,
+    /// Arrastre de selección local en curso (clic izquierdo sin soltar).
     pub(crate) selecting: bool,
+    /// Clic izquierdo reportado a la app que todavía no se soltó, con la última celda reportada
+    /// (para no repetir el mismo arrastre).
+    pub(crate) reported_press: Option<(usize, usize)>,
     pub(crate) scroll_accum: f32,
     _events: Option<Task<()>>,
 }
@@ -115,6 +119,7 @@ impl TerminalView {
             spawn_error: None,
             marked_text: None,
             selecting: false,
+            reported_press: None,
             scroll_accum: 0.0,
             _events: None,
         };
@@ -321,9 +326,10 @@ impl Render for TerminalView {
             .on_action(cx.listener(Self::copy))
             .on_action(cx.listener(Self::paste))
             .on_key_down(cx.listener(Self::on_key_down))
-            .on_mouse_down(gpui::MouseButton::Left, cx.listener(Self::on_mouse_down))
-            .on_mouse_move(cx.listener(Self::on_mouse_move))
-            .on_mouse_up(gpui::MouseButton::Left, cx.listener(Self::on_mouse_up))
+            .on_mouse_down(MouseButton::Left, cx.listener(Self::on_mouse_down))
+            // Soltar fuera de la vista también cierra la selección o el clic reportado.
+            .on_mouse_up(MouseButton::Left, cx.listener(Self::on_mouse_up))
+            .on_mouse_up_out(MouseButton::Left, cx.listener(Self::on_mouse_up))
             .on_scroll_wheel(cx.listener(Self::on_scroll))
             .relative()
             .size_full()
@@ -363,9 +369,16 @@ impl Render for TerminalView {
                     move |bounds, snapshot, window, cx| {
                         window.handle_input(
                             &focus,
-                            TerminalInputHandler(ElementInputHandler::new(bounds, entity)),
+                            TerminalInputHandler(ElementInputHandler::new(bounds, entity.clone())),
                             cx,
                         );
+                        // El movimiento se escucha a nivel ventana (no solo sobre la vista) para
+                        // que el arrastre siga aunque el mouse salga del área o de la ventana.
+                        window.on_mouse_event(move |event: &MouseMoveEvent, phase, window, cx| {
+                            if phase == DispatchPhase::Bubble {
+                                entity.update(cx, |view, cx| view.on_mouse_move(event, window, cx));
+                            }
+                        });
                         if let Some(snapshot) = snapshot {
                             paint_snapshot(
                                 &snapshot,

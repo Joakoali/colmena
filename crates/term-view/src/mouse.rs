@@ -1,7 +1,8 @@
 //! Mouse sobre la terminal: selección local o reporte a la app, y rueda.
 
 use gpui::{
-    Context, MouseDownEvent, MouseMoveEvent, MouseUpEvent, ScrollDelta, ScrollWheelEvent, Window,
+    Context, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent, ScrollDelta,
+    ScrollWheelEvent, Window,
 };
 use term_core::{MouseAction, ReportButton, SelectKind, alternate_scroll, encode_mouse};
 
@@ -26,6 +27,8 @@ impl TerminalView {
         let modes = session.modes();
         // Con Shift se selecciona aunque la app haya pedido el mouse (como en xterm).
         if modes.mouse.any() && !event.modifiers.shift {
+            // Un clic que va a la app no continúa ninguna selección local.
+            self.selecting = false;
             let m = mods(&event.modifiers);
             if let Some(bytes) = encode_mouse(
                 ReportButton::Left,
@@ -36,6 +39,7 @@ impl TerminalView {
                 modes.mouse,
             ) {
                 session.write(bytes);
+                self.reported_press = Some((col, row));
             }
             return;
         }
@@ -46,16 +50,21 @@ impl TerminalView {
         };
         session.start_selection(col, row, right_half, kind);
         self.selecting = true;
+        self.reported_press = None;
         cx.notify();
     }
 
+    /// Se escucha a nivel ventana: llega aunque el mouse esté fuera de la vista, y `cell_at` lo
+    /// lleva a la celda del borde más cercana. Solo sigue arrastres que empezaron en esta vista.
     pub(crate) fn on_mouse_move(
         &mut self,
         event: &MouseMoveEvent,
         _window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        if event.pressed_button != Some(gpui::MouseButton::Left) {
+        if event.pressed_button != Some(MouseButton::Left)
+            || !(self.selecting || self.reported_press.is_some())
+        {
             return;
         }
         let (Some(session), Some(layout)) = (self.session.clone(), self.layout.get()) else {
@@ -67,6 +76,11 @@ impl TerminalView {
             cx.notify();
             return;
         }
+        // macOS repite el último arrastre mientras el mouse está quieto: no reportar la misma celda.
+        if self.reported_press == Some((col, row)) {
+            return;
+        }
+        self.reported_press = Some((col, row));
         let modes = session.modes();
         let m = mods(&event.modifiers);
         if let Some(bytes) = encode_mouse(
@@ -81,20 +95,26 @@ impl TerminalView {
         }
     }
 
+    /// Registrado con `on_mouse_up` y `on_mouse_up_out`: también llega si se suelta fuera de la
+    /// vista o de la ventana.
     pub(crate) fn on_mouse_up(
         &mut self,
         event: &MouseUpEvent,
         _window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        let (Some(session), Some(layout)) = (self.session.clone(), self.layout.get()) else {
-            return;
-        };
         if self.selecting {
             self.selecting = false;
             cx.notify();
             return;
         }
+        // Solo se reporta la liberación de un clic que se reportó.
+        if self.reported_press.take().is_none() {
+            return;
+        }
+        let (Some(session), Some(layout)) = (self.session.clone(), self.layout.get()) else {
+            return;
+        };
         let (col, row, _) = layout.cell_at(event.position);
         let modes = session.modes();
         let m = mods(&event.modifiers);
