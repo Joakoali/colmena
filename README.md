@@ -20,3 +20,10 @@ cargo run -p colmena          # abrir la app
 cargo test --workspace        # tests
 COLMENA_LOG=debug cargo run -p colmena   # más logs
 ```
+
+## Licencia
+
+Doble licencia, a elección de quien lo use:
+
+- Apache License 2.0 ([LICENSE-APACHE](LICENSE-APACHE))
+- MIT ([LICENSE-MIT](LICENSE-MIT))
