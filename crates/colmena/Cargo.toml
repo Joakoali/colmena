@@ -8,5 +8,4 @@ rust-version.workspace = true
 term-core.workspace = true
 term-view.workspace = true
 gpui.workspace = true
-tracing.workspace = true
 tracing-subscriber.workspace = true

@@ -945,7 +945,6 @@ dependencies = [
  "gpui",
  "term-core",
  "term-view",
- "tracing",
  "tracing-subscriber",
 ]
 

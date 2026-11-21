@@ -238,6 +238,7 @@ impl TerminalView {
             session.scroll_to_bottom();
             session.clear_selection();
             session.write(bytes);
+            cx.notify();
             cx.stop_propagation();
         }
     }
@@ -255,6 +256,7 @@ impl TerminalView {
         if let Some(text) = cx.read_from_clipboard().and_then(|item| item.text()) {
             session.scroll_to_bottom();
             session.write(encode_paste(&text, session.modes().input));
+            cx.notify();
         }
     }
 
