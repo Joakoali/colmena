@@ -11,8 +11,8 @@ use futures::StreamExt;
 use futures::channel::mpsc;
 use gpui::{
     App, Bounds, ClipboardItem, Context, ElementInputHandler, EntityInputHandler, FocusHandle,
-    Focusable, Font, KeyDownEvent, Pixels, Point, Task, UTF16Selection, Window, canvas, div, font,
-    point, prelude::*, px, size,
+    Focusable, Font, InputHandler, KeyDownEvent, Pixels, Point, Task, UTF16Selection, Window,
+    canvas, div, font, point, prelude::*, px, size,
 };
 use term_core::{GridSize, Palette, Session, SpawnOptions, TermEvent, encode_key, encode_paste};
 
@@ -359,7 +359,11 @@ impl Render for TerminalView {
                         snapshot
                     },
                     move |bounds, snapshot, window, cx| {
-                        window.handle_input(&focus, ElementInputHandler::new(bounds, entity), cx);
+                        window.handle_input(
+                            &focus,
+                            TerminalInputHandler(ElementInputHandler::new(bounds, entity)),
+                            cx,
+                        );
                         if let Some(snapshot) = snapshot {
                             paint_snapshot(
                                 &snapshot,
@@ -375,6 +379,91 @@ impl Render for TerminalView {
                 .size_full(),
             )
             .children(banner)
+    }
+}
+
+/// `ElementInputHandler` con el "mantener apretado" de macOS apagado: una tecla sostenida se
+/// repite (`j` en `vim`) en vez de abrir el popup de acentos. Lo demás se delega tal cual.
+struct TerminalInputHandler(ElementInputHandler<TerminalView>);
+
+impl InputHandler for TerminalInputHandler {
+    fn selected_text_range(
+        &mut self,
+        ignore_disabled_input: bool,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> Option<UTF16Selection> {
+        self.0
+            .selected_text_range(ignore_disabled_input, window, cx)
+    }
+
+    fn marked_text_range(&mut self, window: &mut Window, cx: &mut App) -> Option<Range<usize>> {
+        self.0.marked_text_range(window, cx)
+    }
+
+    fn text_for_range(
+        &mut self,
+        range_utf16: Range<usize>,
+        adjusted_range: &mut Option<Range<usize>>,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> Option<String> {
+        self.0
+            .text_for_range(range_utf16, adjusted_range, window, cx)
+    }
+
+    fn replace_text_in_range(
+        &mut self,
+        replacement_range: Option<Range<usize>>,
+        text: &str,
+        window: &mut Window,
+        cx: &mut App,
+    ) {
+        self.0
+            .replace_text_in_range(replacement_range, text, window, cx);
+    }
+
+    fn replace_and_mark_text_in_range(
+        &mut self,
+        range_utf16: Option<Range<usize>>,
+        new_text: &str,
+        new_selected_range: Option<Range<usize>>,
+        window: &mut Window,
+        cx: &mut App,
+    ) {
+        self.0.replace_and_mark_text_in_range(
+            range_utf16,
+            new_text,
+            new_selected_range,
+            window,
+            cx,
+        );
+    }
+
+    fn unmark_text(&mut self, window: &mut Window, cx: &mut App) {
+        self.0.unmark_text(window, cx);
+    }
+
+    fn bounds_for_range(
+        &mut self,
+        range_utf16: Range<usize>,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> Option<Bounds<Pixels>> {
+        self.0.bounds_for_range(range_utf16, window, cx)
+    }
+
+    fn character_index_for_point(
+        &mut self,
+        point: Point<Pixels>,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> Option<usize> {
+        self.0.character_index_for_point(point, window, cx)
+    }
+
+    fn apple_press_and_hold_enabled(&mut self) -> bool {
+        false
     }
 }
 
