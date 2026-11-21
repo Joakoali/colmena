@@ -31,7 +31,15 @@ validan en VM (spec §9) y lo que falle se anota como issue para M2.
 | 24 | Con la ventana sin foco, el cursor se ve hueco | | | |
 | 25 | AltGr compone caracteres (`@`, `{`) en teclados que lo usan | n/a | | |
 | 26 | `printf '\e]0;x\a'`, luego `exit` y Enter: el título vuelve a "colmena" | | | |
+| 27 | Acentos descompuestos: `printf 'cancio\xcc\x81n\n'` se ve "canción" | | | |
+| 28 | **Claude Code**: Option+Enter inserta salto de línea en el prompt | | | |
+| 29 | **Claude Code**: Shift+Tab cambia de modo | | | |
+| 30 | **Claude Code**: acento con tecla muerta en el prompt (`canción`) | | | |
+| 31 | **Claude Code**: redimensionar la ventana con `claude` abierto redibuja bien | | | |
+| 32 | Dentro de colmena, `echo $TERM_PROGRAM` muestra `colmena` y `env \| grep -i claude` no muestra variables heredadas | ✓ (auto) | | |
 
 `(auto)` marca ítems verificados por script (ítem 2: se lanzó el binario release con `SHELL=<script>`
-y el script registró `TERM=xterm-256color COLORTERM=truecolor` dentro del PTY); el resto lo corre
-una persona a mano.
+y el script registró `TERM=xterm-256color COLORTERM=truecolor` dentro del PTY; ítem 32: lanzado
+igual desde una sesión de Claude Code dentro de Warp, el script registró `TERM_PROGRAM=colmena`,
+`TERM_PROGRAM_VERSION=0.1.0` y ninguna variable `CLAUDE*`, `WARP_*` ni `AI_AGENT`); el resto lo
+corre una persona a mano.
