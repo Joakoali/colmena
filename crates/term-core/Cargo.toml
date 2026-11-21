@@ -8,3 +8,10 @@ repository.workspace = true
 
 [dependencies]
 alacritty_terminal.workspace = true
+
+# GPUI 0.2.2 arrastra `xattr` 0.2.3 (vía gpui_http_client → zed-async-tar), que usa
+# `libc::ENOATTR`; libc 0.2.190 lo quitó en Linux y la build de Linux deja de compilar.
+# Esta cota mantiene todo el árbol en una libc que todavía lo tiene. Se puede quitar cuando
+# GPUI deje de depender de xattr 0.2.
+[target.'cfg(unix)'.dependencies]
+libc = ">=0.2.186, <0.2.190"

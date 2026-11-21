@@ -1,7 +1,9 @@
 use std::sync::mpsc;
 use std::time::{Duration, Instant};
 
-use term_core::{GridSize, Palette, Session, SpawnOptions, TermEvent};
+#[cfg(unix)]
+use term_core::GridSize;
+use term_core::{Palette, Session, SpawnOptions, TermEvent};
 
 const TIMEOUT: Duration = Duration::from_secs(10);
 
