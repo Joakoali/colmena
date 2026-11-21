@@ -1,7 +1,8 @@
 # QA manual — M1 (terminal mínima)
 
-Marcar cada ítem por sistema operativo. macOS es obligatorio para cerrar M1; Linux y Windows se
-validan en VM (spec §9) y lo que falle se anota como issue para M2.
+Marcar cada ítem por sistema operativo. M1 se cierra con esta checklist en macOS y la CI en verde
+en los 3 sistemas; Linux y Windows se validan a mano en VM durante M2 (spec §13) y lo que falle
+se arregla ahí.
 
 | # | Prueba | macOS | Linux | Windows |
 |---|---|---|---|---|

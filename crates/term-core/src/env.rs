@@ -8,8 +8,13 @@
 //! agrega variables, así que el binario las borra del entorno del proceso al arrancar.
 
 /// Prefijos de variables que identifican a la terminal o al agente que lanzó Colmena.
+///
+/// De Claude Code solo se filtran las marcas de la sesión en curso: la configuración del usuario
+/// (`CLAUDE_CODE_USE_BEDROCK`, `CLAUDE_CODE_MAX_OUTPUT_TOKENS`, …) tiene que llegar al shell.
 const INHERITED_PREFIXES: &[&str] = &[
-    "CLAUDE_CODE_",
+    "CLAUDE_CODE_MESSAGING_",
+    "CLAUDE_CODE_CHILD_",
+    "CLAUDE_CODE_SESSION_",
     "TERM_PROGRAM",
     "ITERM_",
     "KITTY_",
@@ -23,6 +28,9 @@ const INHERITED_PREFIXES: &[&str] = &[
 /// Nombres exactos con el mismo papel.
 const INHERITED_NAMES: &[&str] = &[
     "CLAUDECODE",
+    "CLAUDE_CODE_ENTRYPOINT",
+    "CLAUDE_CODE_EXECPATH",
+    "CLAUDE_CODE_SSE_PORT",
     "CLAUDE_PID",
     "CLAUDE_EFFORT",
     "AI_AGENT",
@@ -59,6 +67,11 @@ mod tests {
             "CLAUDE_CODE_CHILD_SESSION",
             "CLAUDE_CODE_MESSAGING_SOCKET",
             "CLAUDE_CODE_MESSAGING_TOKEN",
+            "CLAUDE_CODE_CHILD_NOTES_DIR",
+            "CLAUDE_CODE_ENTRYPOINT",
+            "CLAUDE_CODE_EXECPATH",
+            "CLAUDE_CODE_SESSION_ATTENDED",
+            "CLAUDE_CODE_SSE_PORT",
             "CLAUDE_PID",
             "CLAUDE_EFFORT",
             "AI_AGENT",
@@ -98,6 +111,10 @@ mod tests {
             "SSH_AUTH_SOCK",
             "EDITOR",
             "CLAUDE_CONFIG_DIR",
+            "CLAUDE_CODE_USE_BEDROCK",
+            "CLAUDE_CODE_USE_VERTEX",
+            "CLAUDE_CODE_MAX_OUTPUT_TOKENS",
+            "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC",
             "ANTHROPIC_API_KEY",
             "COLMENA_LOG",
         ] {

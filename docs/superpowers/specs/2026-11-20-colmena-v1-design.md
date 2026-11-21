@@ -429,7 +429,7 @@ Cada hito tiene su propio plan de implementación y termina con algo usable y te
 | El formato de los transcripts es interno y puede cambiar. | Parsing tolerante, fixtures por versión y degradación por campo (sección 5.9). |
 | Los payloads de hooks pueden diferir de lo esperado. | M3 arranca capturando payloads reales antes de escribir el parser. |
 | La tabla de ventanas de contexto puede quedar desactualizada. | Override en `[context_windows]` y fallback a número absoluto. |
-| Linux necesita Vulkan; ConPTY en Windows tiene particularidades (resize, mouse). | QA manual en VM antes de cerrar M1 y M4. |
+| Linux necesita Vulkan; ConPTY en Windows tiene particularidades (resize, mouse). | CI en los 3 sistemas desde M1; QA manual en VM antes de cerrar M2 y M4. |
 | El render de la grilla con GPUI puede ser lento con mucha salida. | Benchmark en M1 antes de seguir. |
 
 ## 14. Criterios de aceptación de la v1
