@@ -49,19 +49,27 @@ pub struct Run {
     pub style: CellStyle,
     /// Un único carácter ancho (2 columnas).
     pub wide: bool,
+    /// Una sola celda con caracteres de ancho cero (`o` + tilde combinante, emoji + VS16): se
+    /// pinta sin forzar el avance por glifo para que la marca quede sobre su base.
+    pub cluster: bool,
 }
 
 /// Agrupa celdas consecutivas con el mismo estilo. Cada carácter ancho va en su propio tramo
 /// de 2 columnas y las celdas espaciadoras se saltean.
+///
+/// Una celda con caracteres de ancho cero también va sola: los tramos se pintan con un avance
+/// fijo por glifo, y la marca extra correría a la siguiente columna todo lo que viene después.
 pub fn row_runs(cells: &[CellView]) -> Vec<Run> {
     let mut runs: Vec<Run> = Vec::new();
     for (col, cell) in cells.iter().enumerate() {
         if cell.spacer {
             continue;
         }
-        if !cell.wide {
+        let cluster = cell.zerowidth.is_some();
+        if !cell.wide && !cluster {
             if let Some(run) = runs.last_mut() {
                 let same = !run.wide
+                    && !run.cluster
                     && run.fg == cell.fg
                     && run.bg == cell.bg
                     && run.style == cell.style
@@ -73,14 +81,17 @@ pub fn row_runs(cells: &[CellView]) -> Vec<Run> {
                 }
             }
         }
+        let mut text = cell.ch.to_string();
+        text.extend(cell.zerowidth.iter().flatten());
         runs.push(Run {
             col,
             cols: if cell.wide { 2 } else { 1 },
-            text: cell.ch.to_string(),
+            text,
             fg: cell.fg,
             bg: cell.bg,
             style: cell.style,
             wide: cell.wide,
+            cluster,
         });
     }
     runs
@@ -98,6 +109,7 @@ mod tests {
     fn cell(ch: char, fg: Rgb) -> CellView {
         CellView {
             ch,
+            zerowidth: None,
             fg,
             bg: Rgb::new(0, 0, 0),
             style: CellStyle::default(),
@@ -164,6 +176,54 @@ mod tests {
         assert_eq!(
             summary,
             vec![(0, 1, "a", false), (1, 2, "日", true), (3, 1, "b", false)]
+        );
+    }
+
+    #[test]
+    fn el_ancho_cero_va_en_su_propio_tramo_sin_correr_la_grilla() {
+        let white = Rgb::new(255, 255, 255);
+        let mut o = cell('o', white);
+        o.zerowidth = Some(Box::new(['\u{301}']));
+        let cells = [
+            cell('c', white),
+            cell('i', white),
+            o,
+            cell('n', white),
+            cell('!', white),
+        ];
+        let runs = row_runs(&cells);
+        let summary: Vec<_> = runs
+            .iter()
+            .map(|r| (r.col, r.cols, r.text.as_str(), r.cluster))
+            .collect();
+        assert_eq!(
+            summary,
+            vec![
+                (0, 2, "ci", false),
+                (2, 1, "o\u{301}", true),
+                // La celda que sigue a la tilde arranca en su propia columna.
+                (3, 2, "n!", false),
+            ]
+        );
+    }
+
+    #[test]
+    fn un_ancho_con_marca_ocupa_sus_dos_columnas() {
+        let white = Rgb::new(255, 255, 255);
+        let mut wide = cell('日', white);
+        wide.wide = true;
+        wide.zerowidth = Some(Box::new(['\u{3099}']));
+        let mut spacer = cell(' ', white);
+        spacer.spacer = true;
+        let cells = [wide, spacer, cell('x', white)];
+        let runs = row_runs(&cells);
+        let summary: Vec<_> = runs
+            .iter()
+            .map(|r| (r.col, r.cols, r.text.as_str(), r.wide, r.cluster))
+            .collect();
+        assert_eq!(
+            summary,
+            vec![(0, 2, "日\u{3099}", true, true), (2, 1, "x", false, false)]
         );
     }
 }

@@ -16,9 +16,12 @@ pub struct CellStyle {
     pub strikeout: bool,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CellView {
     pub ch: char,
+    /// Caracteres de ancho cero que van sobre `ch`: tildes combinantes (texto en NFD), selectores
+    /// de variante (VS16), ZWJ. `None` en el caso común, sin reservar memoria.
+    pub zerowidth: Option<Box<[char]>>,
     pub fg: Rgb,
     pub bg: Rgb,
     pub style: CellStyle,
@@ -63,12 +66,11 @@ impl Snapshot {
 
     /// Texto de la fila sin espacios finales (útil para tests y diagnóstico).
     pub fn row_text(&self, row: usize) -> String {
-        let text: String = self
-            .row(row)
-            .iter()
-            .filter(|c| !c.spacer)
-            .map(|c| c.ch)
-            .collect();
+        let mut text = String::new();
+        for cell in self.row(row).iter().filter(|c| !c.spacer) {
+            text.push(cell.ch);
+            text.extend(cell.zerowidth.iter().flatten());
+        }
         text.trim_end().to_string()
     }
 
@@ -96,6 +98,7 @@ pub fn snapshot<T: EventListener>(term: &Term<T>, palette: &Palette, focused: bo
 
     let blank = CellView {
         ch: ' ',
+        zerowidth: None,
         fg: palette.foreground,
         bg: palette.background,
         style: CellStyle::default(),
@@ -133,6 +136,10 @@ pub fn snapshot<T: EventListener>(term: &Term<T>, palette: &Palette, focused: bo
         let blank_char = spacer || flags.contains(Flags::LEADING_WIDE_CHAR_SPACER);
         cells[row as usize * cols + col] = CellView {
             ch: if blank_char { ' ' } else { cell.c },
+            zerowidth: cell
+                .zerowidth()
+                .filter(|z| !blank_char && !z.is_empty())
+                .map(Box::from),
             fg,
             bg,
             style: CellStyle {
@@ -234,6 +241,40 @@ mod tests {
         assert!(snap.row(0)[1].spacer);
         assert_eq!(snap.row(0)[2].ch, 'x');
         assert_eq!(snap.row_text(0), "日x");
+    }
+
+    #[test]
+    fn conserva_los_caracteres_de_ancho_cero() {
+        // "canción" en NFD, como los nombres de archivo de macOS: la tilde (U+0301) va aparte.
+        let term = term_with(20, 1, b"cancio\xcc\x81n");
+        let snap = snapshot(&term, &Palette::colmena_dark(), true);
+        let row = snap.row(0);
+        assert_eq!(row[5].ch, 'o');
+        assert_eq!(row[5].zerowidth.as_deref(), Some(&['\u{301}'][..]));
+        assert_eq!(row[6].ch, 'n', "la tilde no ocupa columna");
+        assert_eq!(row[4].zerowidth, None);
+        assert_eq!(row[6].zerowidth, None);
+        assert_eq!(snap.row_text(0), "cancio\u{301}n");
+    }
+
+    #[test]
+    fn el_ancho_cero_sobre_un_caracter_ancho_va_en_la_primera_celda() {
+        let term = term_with(10, 1, "日\u{3099}x".as_bytes());
+        let snap = snapshot(&term, &Palette::colmena_dark(), true);
+        let row = snap.row(0);
+        assert_eq!(row[0].zerowidth.as_deref(), Some(&['\u{3099}'][..]));
+        assert_eq!(row[1].zerowidth, None, "la espaciadora no lleva nada");
+        assert_eq!(row[2].ch, 'x');
+        assert_eq!(snap.row_text(0), "日\u{3099}x");
+    }
+
+    #[test]
+    fn sin_ancho_cero_no_hay_extra_aunque_la_celda_tenga_otros_atributos() {
+        // El color de subrayado (SGR 58) también vive en el `extra` de alacritty.
+        let term = term_with(10, 1, b"\x1b[4;58;2;1;2;3mA");
+        let snap = snapshot(&term, &Palette::colmena_dark(), true);
+        assert_eq!(snap.row(0)[0].ch, 'A');
+        assert_eq!(snap.row(0)[0].zerowidth, None);
     }
 
     #[test]

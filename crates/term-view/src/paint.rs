@@ -74,12 +74,21 @@ pub(crate) fn paint_snapshot(
                     color: Some(color),
                 }),
             };
-            let glyph_width = if run.wide { cw * 2.0 } else { cw };
+            // Avance fijo: cada glifo cae en su columna aunque la fuente no sea exacta. Un racimo
+            // (base + marcas de ancho cero) va solo en su tramo y se deja que el shaper ponga la
+            // marca sobre la base; con avance fijo la marca se iría a la columna siguiente.
+            let force_width = if run.cluster {
+                None
+            } else if run.wide {
+                Some(cw * 2.0)
+            } else {
+                Some(cw)
+            };
             let shaped = window.text_system().shape_line(
                 run.text.clone().into(),
                 style.font_size,
                 &[text_run],
-                Some(glyph_width),
+                force_width,
             );
             if let Err(err) = shaped.paint(point(base.x + cw * run.col as f32, y), ch, window, cx) {
                 tracing::warn!("no se pudo pintar una línea: {err}");
