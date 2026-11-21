@@ -284,7 +284,9 @@ impl Render for TerminalView {
         }
 
         let metrics = self.measure(window);
-        let focused = self.focus_handle.is_focused(window);
+        // Con la ventana inactiva el foco interno no cambia, pero el cursor tiene que verse hueco.
+        // GPUI vuelve a renderizar al activarse o desactivarse la ventana.
+        let focused = self.focus_handle.is_focused(window) && window.is_window_active();
         let session = self.session.clone();
         let palette = self.options.palette.clone();
         let layout = self.layout.clone();
